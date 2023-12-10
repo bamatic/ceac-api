@@ -1,41 +1,41 @@
-package controllers;
+package controllers.impl1;
 
 import com.sun.net.httpserver.HttpExchange;
 import contracts.*;
-import entities.Command;
+import entities.Address;
 import entities.User;
 import http.HttpRequestManager;
 import services.impl1.JSON.JsonArrayService;
 import services.impl1.JSON.JsonObjectService;
 
-
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.List;
-public class CommandController implements IHttpController {
 
-    private final IRepository<Command> repo;
-    private final ICommandFromShoppingCard shoppingCardRepo;
+public class AddressController implements IHttpController {
+
+    private final IRepository<Address> repo;
+    private final IAddressUserRepository addressUserRepo;
     private final ILogger logger;
-    public CommandController(IRepository<Command> repo, ICommandFromShoppingCard shoppingCardRepo, ILogger logger) {
+    public AddressController(IRepository<Address> repo, IAddressUserRepository addressUserRepo, ILogger logger ) {
         this.repo = repo;
-        this.shoppingCardRepo = shoppingCardRepo;
+        this.addressUserRepo = addressUserRepo;
         this.logger = logger;
     }
     @Override
     public void setRepositoryUser(User user) {
         this.repo.setUser(user);
-        this.shoppingCardRepo.setUser(user);
+        this.addressUserRepo.setUser(user);
     }
     @Override
     public void index(User user, HttpExchange exchange, long limit) throws IOException {
-        List<Command> commands = this.repo.all(limit);
-        IJsonArray jsonCommands = new JsonArrayService();
-        for (Command command : commands) {
-            IJsonObject json = command.toJSONObject();
-            jsonCommands.add(json);
+        List<Address> addresses = this.repo.all(limit);
+        IJsonArray jsonAddresses = new JsonArrayService();
+        for (Address address : addresses) {
+            IJsonObject json = address.toJSONObject();
+            jsonAddresses.add(json);
         }
-        String responseBody = jsonCommands.toJSONString();
+        String responseBody = jsonAddresses.toJSONString();
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         exchange.sendResponseHeaders(200, responseBody.getBytes().length);
         OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
@@ -46,14 +46,14 @@ public class CommandController implements IHttpController {
 
     @Override
     public void show(User user, HttpExchange exchange, long id) throws IOException {
-        Command command = this.repo.get(id);
-        if (command == null) {
+        Address address = this.repo.get(id);
+        if (address == null) {
             exchange.sendResponseHeaders(404, -1);
             exchange.close();
         }
         else {
-            IJsonObject jsonCommand = command.toJSONObject();
-            String responseBody = jsonCommand.toJSONString();
+            IJsonObject jsonAddresses = address.toJSONObject();
+            String responseBody = jsonAddresses.toJSONString();
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
             exchange.sendResponseHeaders(200, responseBody.getBytes().length);
             OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
@@ -66,18 +66,18 @@ public class CommandController implements IHttpController {
 
     @Override
     public void create(User user, HttpExchange exchange, IJsonObject payload) throws IOException {
-        Command command = Command.fromJSONObject(user, payload);
-        if (command != null) {
-            Command newCommand = null;
-            HttpRequestManager httpRequestManager = new HttpRequestManager(exchange, this.logger);
-            if (httpRequestManager.isDeleteSP()) {
-                newCommand = this.shoppingCardRepo.createSP(command);
+        Address address = Address.fromJSONObject(payload);
+        if (address != null) {
+            Address newAddress = null;
+            HttpRequestManager requestManager = new HttpRequestManager(exchange, this.logger);
+            if (requestManager.isDelivery() || requestManager.isInvoice()) {
+                newAddress = this.addressUserRepo.createForUser(address, requestManager.getCustomerAddress());
             }
             else {
-                newCommand = this.repo.create(command);
+                newAddress = this.repo.create(address);
             }
-            if (newCommand != null) {
-                this.show(user, exchange, newCommand.getId());
+            if (newAddress != null) {
+                this.show(user, exchange, newAddress.getId());
             }
             else {
                 exchange.sendResponseHeaders(503, -1);
@@ -93,14 +93,25 @@ public class CommandController implements IHttpController {
 
     @Override
     public void update(User user, HttpExchange exchange, long id, IJsonObject payload) throws IOException {
-        exchange.sendResponseHeaders(405, -1);
-        exchange.close();
+        Address address = Address.fromJSONObject(payload);
+        if (address != null) {
+            if (this.repo.update(id, address)) {
+                this.show(user, exchange, id);
+            }
+            else {
+                exchange.sendResponseHeaders(503, -1);
+                exchange.close();
+            }
+        }
+        else {
+            exchange.sendResponseHeaders(400, -1);
+            exchange.close();
+        }
     }
 
     @Override
     public void delete(User user, HttpExchange exchange, long id) throws IOException {
-
-        if (user.isAdmin() && this.repo.delete(id)) {
+        if (this.repo.delete(id)) {
             IJsonObject jsonCommand = new JsonObjectService();
             jsonCommand.put("id", id);
             jsonCommand.put("deleted", true);
@@ -117,6 +128,5 @@ public class CommandController implements IHttpController {
             exchange.sendResponseHeaders(503, -1);
             exchange.close();
         }
-
     }
 }

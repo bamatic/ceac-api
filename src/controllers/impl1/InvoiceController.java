@@ -1,19 +1,19 @@
-package controllers;
+package controllers.impl1;
 
 import com.sun.net.httpserver.HttpExchange;
-import contracts.*;
-import entities.Product;
+import contracts.IHttpController;
+import contracts.IJsonObject;
+import contracts.ILogger;
+import contracts.IRepository;
+import entities.Command;
 import entities.User;
-import services.impl1.JSON.JsonArrayService;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.List;
 
-public class ProductController implements IHttpController {
-
-    private final IRepository<Product> repo;
-    public ProductController(IRepository<Product> repo) {
+public class InvoiceController implements IHttpController {
+    private final IRepository<Command> repo;
+    public InvoiceController(IRepository<Command> repo) {
         this.repo = repo;
     }
     @Override
@@ -22,46 +22,32 @@ public class ProductController implements IHttpController {
     }
     @Override
     public void index(User user, HttpExchange exchange, long limit) throws IOException {
-        List<Product> products = this.repo.all(limit);
-        IJsonArray jsonProducts = new JsonArrayService();
-        for (Product product : products) {
-            IJsonObject json = product.toJSONObject();
-            jsonProducts.add(json);
-        }
-        String responseBody = jsonProducts.toJSONString();
-        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
-        exchange.sendResponseHeaders(200, responseBody.getBytes().length);
-        OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
-        writer.write(responseBody);
-        writer.flush();
+        exchange.sendResponseHeaders(405, -1);
         exchange.close();
     }
 
     @Override
     public void show(User user, HttpExchange exchange, long id) throws IOException {
-        Product product = this.repo.get(id);
-        if (product == null) {
+        Command command = this.repo.get(id);
+        if (command == null) {
             exchange.sendResponseHeaders(404, -1);
             exchange.close();
         }
         else {
-            IJsonObject jsonCommand = product.toJSONObject();
-            String responseBody = jsonCommand.toJSONString();
-            exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+            String responseBody = command.toXML();
+            exchange.getResponseHeaders().set("Content-Type", "application/xml; charset=utf-8");
             exchange.sendResponseHeaders(200, responseBody.getBytes().length);
             OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
             writer.write(responseBody);
             writer.flush();
             exchange.close();
         }
-
     }
 
     @Override
     public void create(User user, HttpExchange exchange, IJsonObject payload) throws IOException {
         exchange.sendResponseHeaders(405, -1);
         exchange.close();
-
     }
 
     @Override
@@ -75,4 +61,5 @@ public class ProductController implements IHttpController {
         exchange.sendResponseHeaders(405, -1);
         exchange.close();
     }
+
 }

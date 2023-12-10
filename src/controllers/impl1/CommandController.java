@@ -1,35 +1,41 @@
-package controllers;
+package controllers.impl1;
 
 import com.sun.net.httpserver.HttpExchange;
 import contracts.*;
-import entities.ShoppingCard;
+import entities.Command;
 import entities.User;
+import http.HttpRequestManager;
 import services.impl1.JSON.JsonArrayService;
 import services.impl1.JSON.JsonObjectService;
+
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.List;
+public class CommandController implements IHttpController {
 
-public class ShoppingCardController implements IHttpController {
-
-    private final IRepository<ShoppingCard> repo;
-    public ShoppingCardController(IRepository<ShoppingCard> repo) {
+    private final IRepository<Command> repo;
+    private final ICommandFromShoppingCard shoppingCardRepo;
+    private final ILogger logger;
+    public CommandController(IRepository<Command> repo, ICommandFromShoppingCard shoppingCardRepo, ILogger logger) {
         this.repo = repo;
+        this.shoppingCardRepo = shoppingCardRepo;
+        this.logger = logger;
     }
     @Override
     public void setRepositoryUser(User user) {
         this.repo.setUser(user);
+        this.shoppingCardRepo.setUser(user);
     }
     @Override
     public void index(User user, HttpExchange exchange, long limit) throws IOException {
-        List<ShoppingCard> shoppingCards = this.repo.all(limit);
-        IJsonArray jsonItems = new JsonArrayService();
-        for (ShoppingCard jsomItem : shoppingCards) {
-            IJsonObject json = jsomItem.toJSONObject();
-            jsonItems.add(json);
+        List<Command> commands = this.repo.all(limit);
+        IJsonArray jsonCommands = new JsonArrayService();
+        for (Command command : commands) {
+            IJsonObject json = command.toJSONObject();
+            jsonCommands.add(json);
         }
-        String responseBody = jsonItems.toJSONString();
+        String responseBody = jsonCommands.toJSONString();
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         exchange.sendResponseHeaders(200, responseBody.getBytes().length);
         OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
@@ -40,14 +46,14 @@ public class ShoppingCardController implements IHttpController {
 
     @Override
     public void show(User user, HttpExchange exchange, long id) throws IOException {
-        ShoppingCard shoppingCard = this.repo.get(id);
-        if (shoppingCard == null) {
+        Command command = this.repo.get(id);
+        if (command == null) {
             exchange.sendResponseHeaders(404, -1);
             exchange.close();
         }
         else {
-            IJsonObject jsonShoppingCard = shoppingCard.toJSONObject();
-            String responseBody = jsonShoppingCard.toJSONString();
+            IJsonObject jsonCommand = command.toJSONObject();
+            String responseBody = jsonCommand.toJSONString();
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
             exchange.sendResponseHeaders(200, responseBody.getBytes().length);
             OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
@@ -60,11 +66,18 @@ public class ShoppingCardController implements IHttpController {
 
     @Override
     public void create(User user, HttpExchange exchange, IJsonObject payload) throws IOException {
-        ShoppingCard shoppingCard = ShoppingCard.fromJSONObject(user, payload);
-        if (shoppingCard != null) {
-            ShoppingCard newShoppingCard = this.repo.create(shoppingCard);
-            if (newShoppingCard != null) {
-                this.show(user, exchange, newShoppingCard.getId());
+        Command command = Command.fromJSONObject(user, payload);
+        if (command != null) {
+            Command newCommand = null;
+            HttpRequestManager httpRequestManager = new HttpRequestManager(exchange, this.logger);
+            if (httpRequestManager.isDeleteSP()) {
+                newCommand = this.shoppingCardRepo.createSP(command);
+            }
+            else {
+                newCommand = this.repo.create(command);
+            }
+            if (newCommand != null) {
+                this.show(user, exchange, newCommand.getId());
             }
             else {
                 exchange.sendResponseHeaders(503, -1);
@@ -80,35 +93,23 @@ public class ShoppingCardController implements IHttpController {
 
     @Override
     public void update(User user, HttpExchange exchange, long id, IJsonObject payload) throws IOException {
-        ShoppingCard shoppingCard = ShoppingCard.fromJSONObject(user, payload);
-        if (shoppingCard != null) {
-            if (this.repo.update(id, shoppingCard)) {
-                this.show(user, exchange, id);
-                exchange.close();
-            }
-            else {
-                exchange.sendResponseHeaders(503, -1);
-                exchange.close();
-            }
-        }
-        else {
-            exchange.sendResponseHeaders(400, -1);
-            exchange.close();
-        }
+        exchange.sendResponseHeaders(405, -1);
+        exchange.close();
     }
 
     @Override
     public void delete(User user, HttpExchange exchange, long id) throws IOException {
-        if (this.repo.delete(id)) {
-            IJsonObject jsonShoppingCard = new JsonObjectService();
-            jsonShoppingCard.put("id", id);
-            jsonShoppingCard.put("deleted", true);
-            String responseBody = jsonShoppingCard.toJSONString();
+
+        if (user.isAdmin() && this.repo.delete(id)) {
+            IJsonObject jsonCommand = new JsonObjectService();
+            jsonCommand.put("id", id);
+            jsonCommand.put("deleted", true);
+            String responseBody = jsonCommand.toJSONString();
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, responseBody.getBytes().length);
 
             OutputStreamWriter writer = new OutputStreamWriter(exchange.getResponseBody());
-            writer.write(jsonShoppingCard.toJSONString());
+            writer.write(jsonCommand.toJSONString());
             writer.flush();
             exchange.close();
         }
@@ -116,5 +117,6 @@ public class ShoppingCardController implements IHttpController {
             exchange.sendResponseHeaders(503, -1);
             exchange.close();
         }
+
     }
 }
