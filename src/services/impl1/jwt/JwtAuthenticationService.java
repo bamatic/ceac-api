@@ -25,11 +25,12 @@ public class JwtAuthenticationService implements ITokenAuthenticator {
     @Override
     public User verify(HttpExchange exchange, IRepository<User> userRepo) {
         String jws = TokenExtractorService.getToken(exchange, "bamatic-bearer");
-        if (jws == null && !(new HttpRequestManager(exchange, logger)).getMethod().equals("OPTIONS")) {
-            logger.message(
-                    "INFO",
-                    "No jwt found"
-            );
+        if (jws == null) {
+            if ( !(new HttpRequestManager(exchange, this.logger)).getMethod().equals("OPTIONS"))
+                logger.message(
+                        "INFO",
+                        "No jwt found"
+                );
             
             return null;
         }
