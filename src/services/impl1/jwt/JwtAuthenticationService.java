@@ -6,6 +6,7 @@ import contracts.ILogger;
 import contracts.ITokenAuthenticator;
 import contracts.IRepository;
 import entities.User;
+import http.HttpRequestManager;
 import io.jsonwebtoken.*;
 
 import java.io.IOException;
@@ -24,7 +25,7 @@ public class JwtAuthenticationService implements ITokenAuthenticator {
     @Override
     public User verify(HttpExchange exchange, IRepository<User> userRepo) {
         String jws = TokenExtractorService.getToken(exchange, "bamatic-bearer");
-        if (jws == null) {
+        if (jws == null && !(new HttpRequestManager(exchange, logger)).getMethod().equals("OPTIONS")) {
             logger.message(
                     "INFO",
                     "No jwt found"

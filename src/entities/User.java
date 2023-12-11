@@ -111,10 +111,10 @@ public class User {
         if (invoiceAddressId == null)
             return false;
         String password = (String) json.get("password");
-        if (password == null || !User.validatePassword(password) )
+        if (password != null && !User.validatePassword(password) )
             return false;
         String email = (String) json.get("email");
-        return (email !=null && email.length() >120);
+        return (email !=null && email.length() <120);
     }
     public static boolean validatePassword(String password) {
         Pattern pattern = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\^\\$\\!@#%&-_=+<>/\\?{\\}\\[\\]\\(\\)]).{8,}$");
