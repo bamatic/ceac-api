@@ -11,7 +11,19 @@ import services.impl1.jwt.JwtGenerationService;
 
 import javax.sql.DataSource;
 
+/**
+ * provisioning of dependencies and dispatch
+ * of requests to the correct controller
+ */
 public class Router {
+    /**
+     * all contexts (routes) are registered here
+     *
+     * @param server the HttpServer instance
+     * @param dataSource the JDBC datasource
+     * @param logger for logging
+     *
+     */
     public static void addRoutes(HttpServer server, DataSource dataSource, ILogger logger) {
 
         ITokenAuthenticator jwtService = new JwtAuthenticationService(logger);

@@ -9,7 +9,7 @@ import java.io.IOException;
 
 /**
  * For each registered route an IHttpController MUST BE implemented
- * the implemented controller has to be access to the needed repositories
+ * the implemented controller has to access to the needed repositories
  */
 public interface IHttpController {
     /**

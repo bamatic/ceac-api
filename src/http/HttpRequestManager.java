@@ -12,6 +12,10 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * extraction of method, payload, query params
+ * and identifier from the http request
+ */
 public class HttpRequestManager {
     private final String route;
     private final long id;
@@ -23,6 +27,13 @@ public class HttpRequestManager {
     private final String customerAddress;
     private final ILogger logger;
 
+    /**
+     * Extracts info from the httpExchange
+     *
+     * @param httpExchange the Http exchange
+     * @param logger for logging
+     *
+     */
     public HttpRequestManager(HttpExchange httpExchange, ILogger logger) {
         this.logger = logger;
         this.route = this.extractRoute(httpExchange.getRequestURI());

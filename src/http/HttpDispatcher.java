@@ -14,7 +14,26 @@ import java.util.Collection;
 import java.util.List;
 
 
+/**
+ * creates the contexts for the HttpServer
+ * associating a controller to the context
+ * associating to the HTTP VERB a controller method
+ * POST --> create, PUT --> update, DELETE --> delete
+ * GET  --> show or GET  --> all
+ */
 public class HttpDispatcher {
+    /**
+     * create a context into the HttpServer
+     * and calls the controller method
+     *
+     * @param server the HttpServer instance
+     * @param route the context name
+     * @param controller the controller to manage requests to this context
+     * @param authenticator the JWT authentication service
+     * @param logger for logging
+     * @param userRepo accessing the user using the JWT subject
+     *
+     */
     public static void dispatch(
             HttpServer server,
             String route,
@@ -138,6 +157,16 @@ public class HttpDispatcher {
             }
         });
     }
+    /**
+     * create a context into the HttpServer
+     * and calls the controller method
+     *
+     * @param server the HttpServer instance
+     * @param route the context name
+     * @param loginController the controller to manage requests to this context
+     * @param logger for logging
+     *
+     */
     public static void login(
             HttpServer server,
             String route,
